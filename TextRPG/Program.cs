@@ -294,29 +294,29 @@ namespace TextRPG
                     Console.WriteLine($"- {itemNum} {equip}{i.Name}\t| {itemType} +{i.Effect}  | {i.Explanation}");
                     itemNum++;
                 }
+            }
 
-                Console.WriteLine("\n0. 나가기");
-                bool select = false;
+            Console.WriteLine("\n0. 나가기");
+            bool select = false;
 
-                while (!select)
+            while (!select)
+            {
+                Console.Write("\n원하시는 행동을 입력해주세요.\n>>");
+                int input = _gm.SelectInput();
+
+                if (input == 0)
                 {
-                    Console.Write("\n원하시는 행동을 입력해주세요.\n>>");
-                    int input = _gm.SelectInput();
-
-                    if(input == 0)
-                    {
-                        _gm.ChangeState(2);
-                        select = true;
-                    }
-                    else if(input > 0 && input < itemNum)
-                    {
-                        listInventory[input - 1].Use(_player);
-                        select = true;
-                    }
-                    else
-                    {
-                        _gm.WarningInput();
-                    }
+                    _gm.ChangeState(2);
+                    select = true;
+                }
+                else if (listInventory.Count > 0 && input > 0 && input < itemNum)
+                {
+                    listInventory[input - 1].Use(_player);
+                    select = true;
+                }
+                else
+                {
+                    _gm.WarningInput();
                 }
             }
         }
