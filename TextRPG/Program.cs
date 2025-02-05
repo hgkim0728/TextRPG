@@ -13,7 +13,8 @@ namespace TextRPG
             Player player = new Player(Console.ReadLine());
             Shop shop = new Shop();
             Inventory inventory = new Inventory(shop);
-            GameManager gameManager = new GameManager(player, shop, inventory);
+            Dungeon dungeon = new Dungeon();
+            GameManager gameManager = new GameManager(player, shop, inventory, dungeon);
 
             while (gameManager.IsPlay)
             {
@@ -478,20 +479,134 @@ namespace TextRPG
         }
     }
 
+    class Dungeon
+    {
+        string[,] stageInfo;
+
+        public Dungeon()
+        {
+            stageInfo = new string[3, 3] { { "쉬운 던전", "5", "1000" },
+                { "일반 던전", "11", "1700" }, { "어려운 던전", "17", "2500" } };
+        }
+
+        public void DungeonEntry(GameManager _gm, Player _player)
+        {
+            Console.WriteLine("던전입장\n");
+
+            int length = stageInfo.GetLength(0);
+
+            for(int i = 0; i < length; i++)
+            {
+                Console.WriteLine($"{i + 1}. {stageInfo[i, 0]}\t| 방어력 {stageInfo[i, 1]} 이상 권장");
+            }
+
+            Console.WriteLine("0. 나가기\n");
+
+            bool select = false;
+            int input = -1;
+            int playerdefense = _player.Defense + _player.DefenseEquip;
+            int playerAttack = _player.Attack + _player.AttackEquip;
+            int recommended = 0;
+            int reward = 0;
+
+            while(!select)
+            {
+                Console.Write("\n원하시는 행동을 입력해주세요.\n>>");
+
+                input = _gm.SelectInput();
+
+                if (input == 0)
+                {
+                    _gm.ChangeState(0);
+                    select = true;
+                }
+                else if(input > 0 && input < length + 1)
+                {
+                    Console.Clear();
+                    recommended = int.Parse(stageInfo[input - 1, 1]);
+                    select = true;
+                }
+                else
+                {
+                    _gm.WarningInput();
+                }
+            }
+
+            if (input > 0 && input < length + 1)
+            { 
+                if (playerdefense < recommended)
+                {
+                    int random = new Random().Next(0, 10);
+
+                    if (random > 3)
+                    {
+                        Console.WriteLine($"{stageInfo[input - 1, 0]} 클리어 실패\n");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"던전 클리어\n축하합니다!!" +
+                            $"\n{stageInfo[input - 1, 0]}을 클리어 하였습니다.\n");
+                        reward = int.Parse(stageInfo[input - 1, 2]);
+                        reward = (int)reward * (1 + new Random().Next(playerAttack, playerAttack * 2) / 100);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"던전 클리어\n축하합니다!!" +
+                            $"\n{stageInfo[input - 1, 0]}을 클리어 하였습니다.\n");
+                    // 플레이어 공격력에 따른 보상 보너스 구현 실패
+                    reward = int.Parse(stageInfo[input - 1, 2]);
+                    reward = reward * (1 + (int)new Random().Next(playerAttack, playerAttack * 2) / 100);
+                }
+
+                int fix = playerdefense - recommended;
+                int damage = new Random().Next(20 - 2, 35 - 2);
+
+                Console.WriteLine("[탐험 결과]");
+                Console.Write($"체력 {_player.Health} -> ");
+                _player.Health -= damage;
+                Console.WriteLine(_player.Health);
+                Console.Write($"Gold {_player.Gold} G -> ");
+                _player.Gold += reward;
+                Console.WriteLine($"{_player.Gold} G\n");
+                Console.WriteLine("0. 나가기\n");
+
+                select = false;
+                
+                while(!select)
+                {
+                    Console.Write("\n원하시는 행동을 입력해주세요.\n>>");
+                    input = _gm.SelectInput();
+
+                    if(input == 0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        _gm.WarningInput();
+                    }
+                }
+            }
+        }
+    }
+
     class GameManager
     {
         GameState gameState = GameState.Main;
         Player player;
         Shop shop;
         public Inventory Inventory { get; }
+        Dungeon dungeon;
         public bool IsPlay { get; }
 
-        public GameManager(Player _player, Shop _shop, Inventory inventory)
+        public GameManager(Player _player, Shop _shop, Inventory inventory, Dungeon _dungeon)
         {
             player = _player;
             shop = _shop;
             IsPlay = true;
             Inventory = inventory;
+            dungeon = _dungeon;
         }
 
         public void GameFlow()
@@ -516,12 +631,16 @@ namespace TextRPG
                 case GameState.BuyItem:
                     shop.BuyItem(player, this);
                     break;
+                case GameState.Dungeon:
+                    dungeon.DungeonEntry(this, player);
+                    break;
+
             }
         }
 
         private void TownMenu()
         {
-            Console.WriteLine($"1. 상태 보기\n2. 인벤토리\n3. 상점\n");
+            Console.WriteLine($"1. 상태 보기\n2. 인벤토리\n3. 상점\n4. 던전입장");
             bool select = false;
 
             while(!select)
@@ -530,7 +649,7 @@ namespace TextRPG
 
                 int input = SelectInput();
 
-                if(input > 0 && input < 4)
+                if(input > 0 && input < 5)
                 {
                     select = true;
                 }
@@ -545,6 +664,9 @@ namespace TextRPG
                         break;
                     case 3:
                         ChangeState(4);
+                        break;
+                    case 4:
+                        ChangeState(6);
                         break;
                     default:
                         WarningInput();
@@ -580,6 +702,6 @@ namespace TextRPG
 
     enum GameState
     {
-        Main = 0, Status = 1, Inventory = 2, EquipManage = 3, Shop = 4, BuyItem = 5
+        Main = 0, Status = 1, Inventory = 2, EquipManage = 3, Shop = 4, BuyItem = 5, Dungeon = 6
     }
 }
